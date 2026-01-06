@@ -10,6 +10,7 @@ import cn.ctcraft.ctonlinereward.inventory.MainInventoryHolder;
 import cn.ctcraft.ctonlinereward.service.RewardService;
 import cn.ctcraft.ctonlinereward.service.RewardStatus;
 import cn.ctcraft.ctonlinereward.service.YamlService;
+import cn.ctcraft.ctonlinereward.utils.MessageUtil;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.black_ixx.playerpoints.PlayerPointsAPI;
@@ -189,12 +190,13 @@ public class InventoryMonitor implements Listener {
                 player.playSound(player.getLocation(), sound, 1, 1);
                 break;
             case Message:
-                String messageText = actionContent.replace("[Message]", "").replace(" ", "").replace("&", "§");
+                String messageText = actionContent.replace("[Message]", "").replace(" ", "");
                 int moneyNum = configurationSection.getInt("economy.money");
                 messageText = messageText.replace("{money}", String.valueOf(moneyNum));
                 int pointsNum = configurationSection.getInt("economy.points");
                 messageText = messageText.replace("{points}", String.valueOf(pointsNum));
-                player.sendMessage(messageText);
+                // 使用 MiniMessage 发送消息
+                MessageUtil.send(player, messageText);
                 break;
             case closeGUI:
                 player.closeInventory();

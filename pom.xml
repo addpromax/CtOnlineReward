@@ -6,7 +6,7 @@
 
     <groupId>cn.ctcraft</groupId>
     <artifactId>CtOnlineReward</artifactId>
-    <version>0.2.6</version>
+    <version>1.0.0-fork</version>
     <packaging>jar</packaging>
 
     <name>CtOnlineReward</name>
@@ -38,6 +38,14 @@
                                 <relocation>
                                     <pattern>com.zaxxer.hikari</pattern>
                                     <shadedPattern>cn.ctcraft.ctonlinereward.database.hikari</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>com.udojava.evalex</pattern>
+                                    <shadedPattern>cn.ctcraft.ctonlinereward.libs.evalex</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>net.kyori</pattern>
+                                    <shadedPattern>cn.ctcraft.ctonlinereward.libs.kyori</shadedPattern>
                                 </relocation>
                             </relocations>
                             <filters>
@@ -246,6 +254,30 @@
             <groupId>com.github.cryptomorin</groupId>
             <artifactId>XSeries</artifactId>
             <version>13.2.0</version>
+        </dependency>
+        <dependency>
+            <groupId>com.udojava</groupId>
+            <artifactId>EvalEx</artifactId>
+            <version>2.7</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-api</artifactId>
+            <version>4.14.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-text-minimessage</artifactId>
+            <version>4.14.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.kyori</groupId>
+            <artifactId>adventure-platform-bukkit</artifactId>
+            <version>4.3.0</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>

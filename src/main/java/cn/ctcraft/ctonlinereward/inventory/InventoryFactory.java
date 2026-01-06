@@ -8,10 +8,14 @@ import cn.ctcraft.ctonlinereward.service.RewardStatus;
 import cn.ctcraft.ctonlinereward.service.YamlService;
 import cn.ctcraft.ctonlinereward.service.rewardHandler.RewardOnlineTimeHandler;
 import cn.ctcraft.ctonlinereward.utils.ItemUtils;
+import cn.ctcraft.ctonlinereward.utils.MessageUtil;
 import cn.ctcraft.ctonlinereward.utils.Position;
 import cn.ctcraft.ctonlinereward.utils.Util;
 import com.cryptomorin.xseries.XMaterial;
+import com.cryptomorin.xseries.profiles.builder.XSkull;
+import com.cryptomorin.xseries.profiles.objects.Profileable;
 import me.clip.placeholderapi.PlaceholderAPI;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.SkullType;
@@ -76,7 +80,9 @@ public class InventoryFactory {
         YamlConfiguration yamlConfiguration = guiYaml.get(inventoryId);
         String name = yamlConfiguration.getString("name");
         int size = yamlConfiguration.getInt("slot");
-        Inventory inventory = Bukkit.createInventory(mainInventoryHolder, size, name.replace("&", "§"));
+        // 将 MiniMessage 转换为 Legacy 格式用于库存标题
+        String legacyTitle = LegacyComponentSerializer.legacySection().serialize(MessageUtil.parse(name));
+        Inventory inventory = Bukkit.createInventory(mainInventoryHolder, size, legacyTitle);
         addItemStack(inventory, yamlConfiguration);
         mainInventoryHolder.inventoryID = inventoryId;
         return inventory;
@@ -185,7 +191,7 @@ public class InventoryFactory {
     private ItemStack getValueItemStack(ConfigurationSection value) {
         ItemStack itemStack = getItemStackType(null, value);
         ItemMeta itemMeta = itemStack.hasItemMeta() ? itemStack.getItemMeta() : Bukkit.getItemFactory().getItemMeta(itemStack.getType());
-        itemMetaHandler(value, itemMeta);
+        itemStack = itemMetaHandler(value, itemMeta, itemStack);
         itemStack.setItemMeta(itemMeta);
 
         if (value.contains("mode")) {
@@ -225,7 +231,7 @@ public class InventoryFactory {
         if (targetSection != null) {
             itemStack = getItemStackType(itemStack,targetSection);
             ItemMeta itemMeta = itemStack.hasItemMeta() ? itemStack.getItemMeta() : Bukkit.getItemFactory().getItemMeta(itemStack.getType());
-            itemMetaHandler(targetSection, itemMeta);
+            itemStack = itemMetaHandler(targetSection, itemMeta, itemStack);
             itemStack.setItemMeta(itemMeta);
         }
 
@@ -316,17 +322,23 @@ public class InventoryFactory {
         }
     }
 
-    private void itemMetaHandler(ConfigurationSection config, ItemMeta itemMeta) {
+    private ItemStack itemMetaHandler(ConfigurationSection config, ItemMeta itemMeta, ItemStack itemStack) {
         if (config.contains("name")) {
-            String name = config.getString("name").replace("&", "§");
+            String name = config.getString("name");
             String s = PlaceholderAPI.setPlaceholders(player, name);
-            itemMeta.setDisplayName(s);
+            // 将 MiniMessage 转换为 Legacy 格式用于物品名称
+            String legacyName = LegacyComponentSerializer.legacySection().serialize(MessageUtil.parse(s));
+            itemMeta.setDisplayName(legacyName);
         }
         if (config.contains("lore")) {
             List<String> lore = config.getStringList("lore");
-            lore.replaceAll(line -> line.replace("&", "§"));
             List<String> processedLore = PlaceholderAPI.setPlaceholders(player, lore);
-            itemMeta.setLore(processedLore);
+            // 将 MiniMessage 转换为 Legacy 格式用于物品描述
+            List<String> legacyLore = new ArrayList<>();
+            for (String line : processedLore) {
+                legacyLore.add(LegacyComponentSerializer.legacySection().serialize(MessageUtil.parse(line)));
+            }
+            itemMeta.setLore(legacyLore);
         }
         if (config.contains("customModelData")) {
 
@@ -336,17 +348,25 @@ public class InventoryFactory {
                 setCustomModelData.setAccessible(true);
                 setCustomModelData.invoke(itemMeta, customModelData);
             } catch (Exception e) {
-                ctOnlineReward.getLogger().warning("§c§l Failed to set CustomModelData for the item! (Unsupported in this version)");
+                ctOnlineReward.getLogger().warning("[CtOnlineReward] Failed to set CustomModelData for the item! (Unsupported in this version)");
             }
         }
 
+        // 注意：头颅材质应该在 getItemStackType 中通过 ItemUtils.createSkull 处理
+        // 这里的 skull 配置用于玩家名称或 Base64 材质（已过时的用法）
         if (itemMeta instanceof SkullMeta && config.contains("skull")) {
             String skull = config.getString("skull");
-            boolean setOwnerSuccess = ((SkullMeta) itemMeta).setOwner(skull);
-            if (!setOwnerSuccess) {
-                ctOnlineReward.getLogger().warning("§c§l 头颅读取失败！");
+            try {
+                // 使用 XSkull 处理头颅设置（兼容高版本）
+                Profileable profile = Profileable.detect(skull);
+                itemStack = XSkull.of(itemStack).profile(profile).apply();
+            } catch (Exception e) {
+                ctOnlineReward.getLogger().warning("[CtOnlineReward] 头颅设置失败: " + skull);
+                e.printStackTrace();
             }
         }
+        
+        return itemStack;
     }
 
     private RewardStatus getRewardStatus(Player player, String rewardId) {

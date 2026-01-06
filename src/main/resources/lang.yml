@@ -1,7 +1,71 @@
-prefix: '[Cor在线奖励]'
-mysql:
-  createTable: '&a&l{prefix} 每日玩家数据表创建成功!'
+prefix: '<green>[在线奖励]</green>'
+
+# 数据库相关
+database:
+  mysql-init: '<green><bold>{prefix} MySQL 数据库初始化成功!</bold></green>'
+  sqlite-init: '<green><bold>{prefix} SQLite 数据库初始化成功!</bold></green>'
+  create-table: '<green><bold>{prefix} 数据表创建成功!</bold></green>'
+  unknown-type: '<red><bold>{prefix} 未知的数据库类型: {type}，将使用 SQLite</bold></red>'
+  
+# 命令相关
+command:
+  no-permission: '<red><bold>■ 权限不足!</bold></red>'
+  reload-success: '<red><bold>重载成功!</bold></red>'
+  player-only: '<red><bold>■ 此命令仅适用于玩家!</bold></red>'
+  menu-not-found: '<red><bold>■ 未找到指定菜单!</bold></red>'
+  menu-error: '<red><bold>■ {menu} 菜单配置异常!</bold></red>'
+  invalid-args: '<red><bold>■ 参数错误,正确格式为 {usage}</bold></red>'
+  
+# 提醒相关
+remind:
+  enabled: '<green><bold>成功打开提醒！</bold></green>'
+  disabled: '<red><bold>成功关闭提醒!</bold></red>'
+  
+# 迁移相关
+migration:
+  start: '<yellow>开始迁移数据...</yellow>'
+  start-yaml: '<yellow>开始从 YAML 文件迁移数据到数据库...</yellow>'
+  start-old-tables: '<yellow>开始迁移旧表数据到新表结构...</yellow>'
+  success: '<green><bold>数据迁移完成！</bold></green>'
+  success-count: '<green><bold>迁移完成！共迁移 {count} 条记录</bold></green>'
+  failed: '<red><bold>数据迁移失败：{error}</bold></red>'
+  drop-warning: '<red><bold>警告：此操作将删除所有旧表！</bold></red>'
+  drop-confirm: '<yellow>如果确认要删除，请使用: /cor dropoldtables confirm</yellow>'
+  drop-backup: '<yellow>建议先备份数据库！</yellow>'
+  drop-start: '<red>开始删除旧表...</red>'
+  drop-success: '<green><bold>旧表删除完成！</bold></green>'
+  drop-failed: '<red><bold>删除旧表失败：{error}</bold></red>'
+  
+# 奖励相关
 reward:
-  volume: '&c&l■ 此奖励需要{rewardSize}格背包空间'
-  volume2: '&c&l■ 背包空间不足,请先清空背包!'
-  volume3: '&c&l■ 权限不足!'
+  volume: '<red><bold>■ 此奖励需要 {size} 格背包空间</bold></red>'
+  no-space: '<red><bold>■ 背包空间不足,请先清空背包!</bold></red>'
+  no-permission: '<red><bold>■ 权限不足!</bold></red>'
+  
+# 挂机相关
+afk:
+  enter: '<red><bold>[在线奖励] 你已进入挂机模式,将不再记录在线时间!</bold></red>'
+  leave: '<green><bold>[在线奖励] 你已离开挂机模式,开始记录在线时间!</bold></green>'
+  
+# 启动相关
+startup:
+  complete: '<white>[</white><green>在线奖励</green><white>]</white><green> > </green><white>插件加载完成,共耗时 {time}ms</white><white>.</white>'
+  time-limit-enabled: '<white>[</white><green>在线奖励</green><white>]</white><green> > </green><white>在线时间限制已开启!</white><white>.</white>'
+  gui-loaded: '<green><bold>● Gui配置文件加载成功,共加载 {count} 个配置文件!</bold></green>'
+  gui-load-failed: '<red><bold>■ Gui配置文件加载失败!</bold></red>'
+  reward-loaded: '<green><bold>● 奖励配置文件加载成功!</bold></green>'
+  papi-loaded: '<green><bold>● papi配置文件加载成功!</bold></green>'
+  papi-load-failed: '<red><bold>■ papi变量配置文件加载失败!</bold></red>'
+  papi-not-found: '<yellow><bold>未找到PlaceholderAPI.</bold></yellow>'
+  playerpoints-found: '<yellow><bold>获取PlayerPoints成功!</bold></yellow>'
+  vault-failed: '<yellow><bold>初始化Vault失败.</bold></yellow>'
+
+# 在线时长查询
+time:
+  header: '<green>========== <bold>在线时长统计</bold> ==========</green>'
+  day: '<yellow>今日在线:</yellow> <white>{time}</white>'
+  week: '<yellow>本周在线:</yellow> <white>{time}</white>'
+  month: '<yellow>本月在线:</yellow> <white>{time}</white>'
+  all: '<yellow>总计在线:</yellow> <white>{time}</white>'
+  footer: '<green>============================</green>'
+  error: '<red>查询在线时长失败，请稍后再试</red>'

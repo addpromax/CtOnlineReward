@@ -1,7 +1,6 @@
 package cn.ctcraft.ctonlinereward;
 
 import cn.ctcraft.ctonlinereward.database.DataService;
-import cn.ctcraft.ctonlinereward.service.WeekOnlineRankService;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonPrimitive;
@@ -53,7 +52,7 @@ public class Placeholder extends PlaceholderExpansion {
                 papijson.add(text, jsonObject);
             }
         }
-        ctOnlineReward.getLogger().info(ChatColor.GREEN + "成功加载" + papijson.size() + "个papi变量");
+        ctOnlineReward.getLogger().info("[CtOnlineReward] 成功加载" + papijson.size() + "个papi变量");
     }
 
 
@@ -121,7 +120,7 @@ public class Placeholder extends PlaceholderExpansion {
                     }
                     return String.valueOf(eval);
                 } catch (ScriptException e) {
-                    ctOnlineReward.getLogger().warning("§c§l■ papi变量公式错误,请检查公式格式是否正确!");
+                    ctOnlineReward.getLogger().warning("[CtOnlineReward] papi变量公式错误,请检查公式格式是否正确!");
                     e.printStackTrace();
                 }
             } else {
@@ -136,14 +135,6 @@ public class Placeholder extends PlaceholderExpansion {
                         return String.valueOf(playerDataService.getPlayerOnlineTime(player));
                 }
             }
-        }
-
-        String[] s = params.split("_");
-        if (s[0].equalsIgnoreCase("week")) {
-            JsonObject rankPlayer = WeekOnlineRankService.getRankPlayer(Integer.parseInt(s[1]));
-            JsonElement name = rankPlayer.get("name");
-            JsonElement time = rankPlayer.get("time");
-            return name.getAsString() + " - " + time.getAsString();
         }
 
         return null;

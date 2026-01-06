@@ -1,24 +1,24 @@
-name: '&e&l这是一个拓展菜单'
+name: '<yellow><bold>这是一个拓展菜单</bold></yellow>'
 slot: 54
 values:
   backup:
-    name: '&c&l返回主菜单'
+    name: '<red><bold>返回主菜单</bold></red>'
     type:
       name: 'minecraft:tnt'
       #是否打开附魔  部分物品会出现问题，请提前测试
       enchantment: true
     lore:
-      - '&e&l返回主菜单'
+      - '<yellow><bold>返回主菜单</bold></yellow>'
     index: 12
     mode: gui
     gui: 'menu.yml'
   head:
-    name: '&c&l头颅测试'
+    name: '<red><bold>头颅测试</bold></red>'
     type:
       name: 'skull'
       skull: 'e3RleHR1cmVzOntTS0lOOnt1cmw6Imh0dHA6Ly90ZXh0dXJlcy5taW5lY3JhZnQubmV0L3RleHR1cmUvY2NhY2RkNGM1MDRhZDAxNmZjYjFjZjcyYzY3OWRjMmJiMmQwZjkxNzMzMDcxYmQ2ODA5ZDJhY2U3YzI2YjUzMyJ9fX0='
     lore:
-      - '&e&l头颅测试'
+      - '<yellow><bold>头颅测试</bold></yellow>'
     index: 14
     mode: gui
     gui: 'menu.yml'

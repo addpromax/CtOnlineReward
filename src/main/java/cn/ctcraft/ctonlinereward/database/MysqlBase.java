@@ -32,17 +32,16 @@ public class MysqlBase implements DataService {
     public void createTable() {
         try (Connection connection = getConnection();
              Statement statement = connection.createStatement()) {
-            String date = Util.getDate();
-            String sql = "CREATE TABLE IF NOT EXISTS `" + date + "`  (" +
-                    "  `uuid` varchar(255) NOT NULL COMMENT '玩家uuid'," +
-                    "  `online_data` varchar(255) DEFAULT NULL COMMENT '在线数据'," +
-                    "  PRIMARY KEY (`uuid`) " +
-                    ") ENGINE = InnoDB CHARACTER SET = utf8";
-            int i = statement.executeUpdate(sql);
-            if (i > 0) {
-                String lang = CtOnlineReward.languageHandler.getLang("mysql.createTable");
-                ctOnlineReward.getLogger().info(lang);
-            }
+            String sql = "CREATE TABLE IF NOT EXISTS `player_online_time`  (" +
+                    "  `uuid` varchar(36) NOT NULL COMMENT '玩家uuid'," +
+                    "  `date` varchar(8) NOT NULL COMMENT '日期(yyyyMMdd)'," +
+                    "  `online_data` TEXT DEFAULT NULL COMMENT '在线数据'," +
+                    "  PRIMARY KEY (`uuid`, `date`)," +
+                    "  INDEX `idx_date` (`date`)," +
+                    "  INDEX `idx_uuid` (`uuid`)" +
+                    ") ENGINE = InnoDB CHARACTER SET = utf8mb4";
+            statement.executeUpdate(sql);
+            ctOnlineReward.getLogger().info("[CtOnlineReward] 每日玩家数据表创建成功!");
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -66,12 +65,14 @@ public class MysqlBase implements DataService {
     public void addPlayerOnlineTime(OfflinePlayer player, int time) {
         String date = Util.getDate();
         try (Connection connection = getConnection();
-             PreparedStatement ps = connection.prepareStatement("UPDATE `"+date+"` SET `online_data` = ? WHERE `uuid` = ?")) {
+             PreparedStatement ps = connection.prepareStatement(
+                     "UPDATE `player_online_time` SET `online_data` = ? WHERE `uuid` = ? AND `date` = ?")) {
             JsonObject playerOnlineData = getPlayerOnlineData(player);
             playerOnlineData.addProperty("time", time);
 
             ps.setString(1, playerOnlineData.toString());
             ps.setString(2, player.getUniqueId().toString());
+            ps.setString(3, date);
             ps.executeUpdate();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -80,9 +81,12 @@ public class MysqlBase implements DataService {
 
 
     public JsonObject getPlayerOnlineData(OfflinePlayer player) {
+        String date = Util.getDate();
         try (Connection connection = getConnection();
-             PreparedStatement ps = connection.prepareStatement("SELECT `online_data` FROM `"+Util.getDate()+"` WHERE `uuid` = ?")) {
+             PreparedStatement ps = connection.prepareStatement(
+                     "SELECT `online_data` FROM `player_online_time` WHERE `uuid` = ? AND `date` = ?")) {
             ps.setString(1, player.getUniqueId().toString());
+            ps.setString(2, date);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     String onlineData = rs.getString(1);
@@ -103,24 +107,22 @@ public class MysqlBase implements DataService {
 
     @Override
     public void insertPlayerOnlineTime(OfflinePlayer player, int time) {
+        String date = Util.getDate();
         try (Connection connection = getConnection();
-             PreparedStatement ps = connection.prepareStatement("INSERT INTO `"+Util.getDate()+"` (`uuid`, `online_data`) VALUES (?, ?)")) {
+             PreparedStatement ps = connection.prepareStatement(
+                     "INSERT INTO `player_online_time` (`uuid`, `date`, `online_data`) VALUES (?, ?, ?)")) {
             ps.setString(1, player.getUniqueId().toString());
+            ps.setString(2, date);
             JsonObject jsonObject = new JsonObject();
             jsonObject.addProperty("time", time);
             jsonObject.add("reward", new JsonArray());
-            ps.setString(2, jsonObject.toString());
+            ps.setString(3, jsonObject.toString());
             int i = ps.executeUpdate();
             if (i < 0) {
-                ctOnlineReward.getLogger().warning("§c§l■ 数据库异常，数据插入失败！");
+                ctOnlineReward.getLogger().warning("[CtOnlineReward] 数据库异常，数据插入失败！");
             }
         } catch (SQLException e) {
-            String message = e.getMessage();
-            if (message.contains("doesn't exist")) {
-                createTable();
-            } else {
-                e.printStackTrace();
-            }
+            e.printStackTrace();
         }
     }
 
@@ -141,8 +143,10 @@ public class MysqlBase implements DataService {
 
     @Override
     public boolean addRewardToPlayData(String rewardId, Player player) {
+        String date = Util.getDate();
         try (Connection connection = getConnection();
-             PreparedStatement ps = connection.prepareStatement("UPDATE `"+Util.getDate()+"` SET `online_data` = ? WHERE `uuid` = ?")) {
+             PreparedStatement ps = connection.prepareStatement(
+                     "UPDATE `player_online_time` SET `online_data` = ? WHERE `uuid` = ? AND `date` = ?")) {
             JsonObject playerOnlineData = getPlayerOnlineData(player);
             JsonElement reward = playerOnlineData.get("reward");
             if (reward == null) {
@@ -155,6 +159,7 @@ public class MysqlBase implements DataService {
             }
             ps.setString(1, playerOnlineData.toString());
             ps.setString(2, player.getUniqueId().toString());
+            ps.setString(3, date);
             int rowsUpdated = ps.executeUpdate();
             return rowsUpdated > 0;
         } catch (SQLException e) {
@@ -167,62 +172,32 @@ public class MysqlBase implements DataService {
     @Override
     public int getPlayerOnlineTimeWeek(OfflinePlayer player) {
         String uuid = player.getUniqueId().toString();
-        Connection connection = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+        List<String> weekString = Util.getWeekString();
         int onlineTime = 0;
-        try {
-            connection = getConnection();
-            SqlUtil sqlUtil = SqlUtil.getInstance();
-            List<String> tableList = sqlUtil.getTableList();
-            List<String> weekString = Util.getWeekString();
-            String sql = "";
-            for (String s : weekString) {
-                if (tableList.contains(s)) {
-                    if (sql.equalsIgnoreCase("")) {
-                        sql = "select `online_data` from `" + s + "` where uuid='" + uuid + "'";
-                    } else {
-                        sql = sql.concat(" union all select `online_data` from `" + s + "` where uuid='" + uuid + "'");
+        
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "SELECT `online_data` FROM `player_online_time` WHERE `uuid` = ? AND `date` IN (" +
+                     String.join(",", weekString.stream().map(s -> "?").toArray(String[]::new)) + ")")) {
+            ps.setString(1, uuid);
+            for (int i = 0; i < weekString.size(); i++) {
+                ps.setString(i + 2, weekString.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String onlineData = rs.getString(1);
+                    if (onlineData != null && !onlineData.isEmpty()) {
+                        JsonParser jsonParser = new JsonParser();
+                        JsonElement parse = jsonParser.parse(onlineData);
+                        if (!parse.isJsonNull()) {
+                            int onlineTimeByJsonObject = Util.getOnlineTimeByJsonObject(parse.getAsJsonObject());
+                            onlineTime += onlineTimeByJsonObject;
+                        }
                     }
                 }
             }
-            if (StringUtils.isEmpty(sql)){
-                return onlineTime;
-            }
-            ps = connection.prepareStatement(sql);
-            rs = ps.executeQuery();
-            while (rs.next()) {
-                JsonParser jsonParser = new JsonParser();
-                JsonElement parse = jsonParser.parse(rs.getString(1));
-                if (!parse.isJsonNull()) {
-                    int onlineTimeByJsonObject = Util.getOnlineTimeByJsonObject(parse.getAsJsonObject());
-                    onlineTime += onlineTimeByJsonObject;
-                }
-            }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         return onlineTime;
     }
@@ -230,59 +205,32 @@ public class MysqlBase implements DataService {
     @Override
     public int getPlayerOnlineTimeMonth(OfflinePlayer player) {
         String uuid = player.getUniqueId().toString();
-        Connection connection = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
+        List<String> monthString = Util.getMonthString();
         int onlineTime = 0;
-        try {
-            connection = getConnection();
-            SqlUtil sqlUtil = SqlUtil.getInstance();
-            List<String> tableList = sqlUtil.getTableList();
-            List<String> monthString = Util.getMonthString();
-            String sql = "";
-            for (String s : monthString) {
-                if (tableList.contains(s)) {
-                    if (sql.equalsIgnoreCase("")) {
-                        sql = "select `online_data` from `" + s + "` where uuid='" + uuid + "'";
-                    } else {
-                        sql = sql.concat(" union all select `online_data` from `" + s + "` where uuid='" + uuid + "'");
+        
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "SELECT `online_data` FROM `player_online_time` WHERE `uuid` = ? AND `date` IN (" +
+                     String.join(",", monthString.stream().map(s -> "?").toArray(String[]::new)) + ")")) {
+            ps.setString(1, uuid);
+            for (int i = 0; i < monthString.size(); i++) {
+                ps.setString(i + 2, monthString.get(i));
+            }
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String onlineData = rs.getString(1);
+                    if (onlineData != null && !onlineData.isEmpty()) {
+                        JsonParser jsonParser = new JsonParser();
+                        JsonElement parse = jsonParser.parse(onlineData);
+                        if (!parse.isJsonNull()) {
+                            int onlineTimeByJsonObject = Util.getOnlineTimeByJsonObject(parse.getAsJsonObject());
+                            onlineTime += onlineTimeByJsonObject;
+                        }
                     }
                 }
             }
-            ps = connection.prepareStatement(sql);
-            rs = ps.executeQuery();
-            while (rs.next()) {
-                JsonParser jsonParser = new JsonParser();
-                JsonElement parse = jsonParser.parse(rs.getString(1));
-                if (!parse.isJsonNull()) {
-                    int onlineTimeByJsonObject = Util.getOnlineTimeByJsonObject(parse.getAsJsonObject());
-                    onlineTime += onlineTimeByJsonObject;
-                }
-            }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         return onlineTime;
     }
@@ -290,56 +238,27 @@ public class MysqlBase implements DataService {
     @Override
     public int getPlayerOnlineTimeAll(OfflinePlayer player) {
         String uuid = player.getUniqueId().toString();
-        Connection connection = null;
-        PreparedStatement ps = null;
-        ResultSet rs = null;
         int onlineTime = 0;
-        try {
-            connection = getConnection();
-            SqlUtil sqlUtil = SqlUtil.getInstance();
-            List<String> tableList = sqlUtil.getTableList();
-            String sql = "";
-            for (String s : tableList) {
-                if (sql.equalsIgnoreCase("")) {
-                    sql = "select `online_data` from `" + s + "` where uuid='" + uuid + "'";
-                } else {
-                    sql = sql.concat(" union all select `online_data` from `" + s + "` where uuid='" + uuid + "'");
+        
+        try (Connection connection = getConnection();
+             PreparedStatement ps = connection.prepareStatement(
+                     "SELECT `online_data` FROM `player_online_time` WHERE `uuid` = ?")) {
+            ps.setString(1, uuid);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String onlineData = rs.getString(1);
+                    if (onlineData != null && !onlineData.isEmpty()) {
+                        JsonParser jsonParser = new JsonParser();
+                        JsonElement parse = jsonParser.parse(onlineData);
+                        if (!parse.isJsonNull()) {
+                            int onlineTimeByJsonObject = Util.getOnlineTimeByJsonObject(parse.getAsJsonObject());
+                            onlineTime += onlineTimeByJsonObject;
+                        }
+                    }
                 }
             }
-            ps = connection.prepareStatement(sql);
-            rs = ps.executeQuery();
-            while (rs.next()) {
-                JsonParser jsonParser = new JsonParser();
-                JsonElement parse = jsonParser.parse(rs.getString(1));
-                if (!parse.isJsonNull()) {
-                    int onlineTimeByJsonObject = Util.getOnlineTimeByJsonObject(parse.getAsJsonObject());
-                    onlineTime += onlineTimeByJsonObject;
-                }
-            }
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (ps != null) {
-                try {
-                    ps.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
-            if (rs != null) {
-                try {
-                    rs.close();
-                } catch (SQLException e) {
-                    e.printStackTrace();
-                }
-            }
         }
         return onlineTime;
     }

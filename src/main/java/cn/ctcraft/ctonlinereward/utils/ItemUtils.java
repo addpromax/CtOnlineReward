@@ -1,10 +1,9 @@
-// DeepSeek code
 package cn.ctcraft.ctonlinereward.utils;
 
-import com.cryptomorin.xseries.SkullUtils;
 import com.cryptomorin.xseries.XMaterial;
+import com.cryptomorin.xseries.profiles.builder.XSkull;
+import com.cryptomorin.xseries.profiles.objects.Profileable;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
 
 public class ItemUtils {
     public static ItemStack createSkull(String texture) {
@@ -19,11 +18,13 @@ public class ItemUtils {
             return item;
         }
 
-        // 使用 SkullUtils 处理材质设置（兼容 1.20.5+ 和旧版本）
-        if (item.getItemMeta() instanceof SkullMeta) {
-            SkullMeta skullMeta = (SkullMeta) item.getItemMeta();
-            SkullUtils.applySkin(skullMeta, texture);
-            item.setItemMeta(skullMeta);
+        // 使用 XSkull 处理材质设置（兼容 1.20.5+ 和旧版本）
+        try {
+            Profileable profile = Profileable.detect(texture);
+            XSkull.of(item).profile(profile).apply();
+        } catch (Exception e) {
+            // 如果设置失败，返回默认头颅
+            e.printStackTrace();
         }
         
         return item;

@@ -57,6 +57,11 @@ public class YamlService {
     }
 
     public boolean loadRewardYaml() {
+        // 初始化 rewardYaml
+        if (YamlData.rewardYaml == null) {
+            YamlData.rewardYaml = new YamlConfiguration();
+        }
+        
         YamlConfiguration rewardYaml = YamlData.rewardYaml;
         Path filePath = Paths.get(ctOnlineReward.getDataFolder().getPath(), "reward.yml");
         if (!Files.exists(filePath)) {

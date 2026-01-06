@@ -3,12 +3,10 @@ package cn.ctcraft.ctonlinereward.service;
 import cn.ctcraft.ctonlinereward.CtOnlineReward;
 import cn.ctcraft.ctonlinereward.database.YamlData;
 import cn.ctcraft.ctonlinereward.service.rewardHandler.RewardOnlineTimeHandler;
+import cn.ctcraft.ctonlinereward.utils.MessageUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import net.md_5.bungee.api.chat.BaseComponent;
-import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -49,23 +47,35 @@ public class RemindTimer extends BukkitRunnable {
     }
 
     private void sendMessage(String permission, String rewardId) {
-        Bukkit.getOnlinePlayers().parallelStream()
-                .filter(onlinePlayer -> permission == null || onlinePlayer.hasPermission(permission))
-                .filter(onlinePlayer -> !players.contains(onlinePlayer))
-                .filter(onlinePlayer -> hasNotReceivedReward(onlinePlayer, rewardId))
-                .forEach(onlinePlayer -> {
-                    players.add(onlinePlayer);
-                    FileConfiguration config = ctOnlineReward.getConfig();
-                    String message = config.getString("Setting.remind.message");
-                    if (message != null) {
-                        if (message.startsWith("[")) {
-                            BaseComponent[] parse = ComponentSerializer.parse(message);
-                            onlinePlayer.spigot().sendMessage(parse);
-                        } else {
-                            onlinePlayer.sendMessage(message.replace("&", "§"));
-                        }
-                    }
-                });
+        FileConfiguration config = ctOnlineReward.getConfig();
+        String message = config.getString("Setting.remind.message");
+        if (message == null || message.isEmpty()) {
+            return;
+        }
+        
+        // 先收集所有符合条件的玩家
+        List<Player> eligiblePlayers = new ArrayList<>();
+        
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            // 检查权限
+            if (permission != null && !onlinePlayer.hasPermission(permission)) {
+                continue;
+            }
+            // 检查是否已提醒
+            if (players.contains(onlinePlayer)) {
+                continue;
+            }
+            // 检查是否已领取奖励
+            if (hasNotReceivedReward(onlinePlayer, rewardId)) {
+                eligiblePlayers.add(onlinePlayer);
+            }
+        }
+        
+        // 批量发送消息
+        for (Player player : eligiblePlayers) {
+            players.add(player);
+            MessageUtil.send(player, message);
+        }
     }
 
     private boolean hasNotReceivedReward(Player player, String rewardId) {

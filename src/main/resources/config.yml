@@ -1,8 +1,8 @@
 version: ${project.version}
 
 database:
-  #存储类型 SQLite、Mysql、Yaml
-  type: yaml
+  #存储类型 SQLite、Mysql
+  type: sqlite
   #以下参数为mysql配置
   mysql_ip: 127.0.0.1
   mysql_port: 3306
@@ -35,15 +35,16 @@ Setting:
     mode: default
     #挂机提醒
     message:
-      joinAfk: '&c&l[在线奖励] 你已进入挂机模式,将不再记录在线时间!'
-      levelAfk: '&a&l[在线奖励] 你已离开挂机模式,开始记录在线时间!'
+      joinAfk: '<red><bold>[在线奖励]</bold> 你已进入挂机模式,将不再记录在线时间!</red>'
+      levelAfk: '<green><bold>[在线奖励]</bold> 你已离开挂机模式,开始记录在线时间!</green>'
   #公告提醒相关配置
   remind:
     #是否打开公告提醒
     use: true
     #提醒间隔时间  单位分钟
     time: 3
-    message: '[{"text": "[在线奖励]有奖励可领取,点击领取","color": "green","clickEvent": {"action": "run_command","value": "/cor"},"hoverEvent": {"action": "show_text","value": {"text": "点击打开菜单"}}}, {"text": "[点击关闭提醒]","color": "red","clickEvent": {"action": "run_command","value": "/cor remind off"}}]'
+    # 使用 MiniMessage 格式，支持点击和悬停
+    message: '<green><click:run_command:/cor><hover:show_text:"<yellow>点击打开菜单</yellow>">[在线奖励]有奖励可领取,点击领取</hover></click></green> <red><click:run_command:/cor remind off><hover:show_text:"<gray>关闭提醒</gray>">[点击关闭提醒]</hover></click></red>'
   #在线提醒配置
   onlineRemind:
     #是否打开在线提醒
@@ -51,16 +52,13 @@ Setting:
     remindValues:
       -
         OnlineTime: 10
-        Message: '&a你已经在线10分钟了，注意休息哦～'
+        Message: '<green>你已经在线10分钟了，注意休息哦～</green>'
       -
         OnlineTime: 20
-        Message: '&a你已经在线20分钟了，适当游戏怡情，不要时间太长哦～'
+        Message: '<green>你已经在线20分钟了，适当游戏怡情，不要时间太长哦～</green>'
   #时间限制  记录在线时间的时间段配置
   timeLimit:
     #是否打开在线时间段配置
     use: false
     #时间限制  24小时制 如: 8 20 为早上八点到晚上八点记录在线时间  只能为整数  中间空格隔开
     limit: '8 20'
-  weekRankEnable: false
-  weekRankFilter:
-    - 'CMI-Fake-Operator'

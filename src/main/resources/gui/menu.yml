@@ -1,8 +1,8 @@
-name: '&c在线奖励菜单'
+name: '<red>在线奖励菜单</red>'
 slot: 27
 values:
   10min:
-    name: '&a在线十分钟奖励'
+    name: '<green>在线十分钟奖励</green>'
     type:
       name: 'minecraft:glass_bottle'
       #是否打开附魔  部分物品会出现问题，请提前测试
@@ -10,7 +10,7 @@ values:
     #可选 设置物品的自定义模型数据.
     #customModelData: 1
     lore:
-      - '&a&n十分钟在线奖励'
+      - '<green><underlined>十分钟在线奖励</underlined></green>'
     index:
       x: 2
       y: 2
@@ -18,43 +18,43 @@ values:
     rewardId: 10min
     extend:
       before:
-        name: '&7在线十分钟奖励[未激活]'
+        name: '<gray>在线十分钟奖励[未激活]</gray>'
         type:
           name: 'minecraft:glass_bottle'
           #是否打开附魔  部分物品会出现问题，请提前测试
           enchantment: false
         lore:
-          - '&7当前在线时间: &f&n%CtOnlineReward_onlinetime%分钟'
+          - '<gray>当前在线时间: <white><underlined>%CtOnlineReward_onlinetime%分钟</underlined></white></gray>'
         #可选 设置物品的自定义模型数据.
         #customModelData: 1
       activation:
-        name: '&a在线十分钟奖励[待领取]'
+        name: '<green>在线十分钟奖励[待领取]</green>'
         type:
           name: 'minecraft:experience_bottle'
           #是否打开附魔  部分物品会出现问题，请提前测试
           enchantment: true
         lore:
-          - '&a已达到领取条件,点击领取'
+          - '<green>已达到领取条件,点击领取</green>'
         #可选 设置物品的自定义模型数据.
         #customModelData: 1
       after:
-        name: '&c在线十分钟奖励[已领取]'
+        name: '<red>在线十分钟奖励[已领取]</red>'
         type:
           name: 'minecraft:glass_bottle'
           #是否打开附魔  部分物品会出现问题，请提前测试
           enchantment: false
         lore:
-          - '&a已经领取过了,明天再来吧!'
+          - '<green>已经领取过了,明天再来吧!</green>'
         #可选 设置物品的自定义模型数据.
         #customModelData: 1
   spawn:
-    name: '&c&l点击回城'
+    name: '<red><bold>点击回城</bold></red>'
     type:
       name: 'minecraft:stone'
       #是否打开附魔  部分物品会出现问题，请提前测试
       enchantment: true
     lore:
-      - '&e&l这是一个执行命令示例'
+      - '<yellow><bold>这是一个执行命令示例</bold></yellow>'
     index:
       x: 4
       y: 2
@@ -67,13 +67,13 @@ values:
       ConsoleCommands:
         - 'me %CtOnlineReward_player%在%CtOnlineReward_world%世界点击了回城!'
   menu:
-    name: '&c&l打开菜单'
+    name: '<red><bold>打开菜单</bold></red>'
     type:
       name: 'minecraft:wood_pickaxe'
       #是否打开附魔  部分物品会出现问题，请提前测试
       enchantment: true
     lore:
-      - '&e&l这是一个打开GUI示例'
+      - '<yellow><bold>这是一个打开GUI示例</bold></yellow>'
     index:
       x: 6
       y: 2

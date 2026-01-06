@@ -1,6 +1,7 @@
 name: CtOnlineReward
 version: ${project.version}
 main: cn.ctcraft.ctonlinereward.CtOnlineReward
+author: MagicBili
 softdepend: [PlaceholderAPI,PlayerPoints,Vault]
 commands:
   cor:

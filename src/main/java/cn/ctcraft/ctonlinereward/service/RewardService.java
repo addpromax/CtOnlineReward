@@ -2,14 +2,16 @@ package cn.ctcraft.ctonlinereward.service;
 
 import cn.ctcraft.ctonlinereward.CtOnlineReward;
 import cn.ctcraft.ctonlinereward.database.YamlData;
-import cn.ctcraft.ctonlinereward.pojo.RewardData;
-import cn.ctcraft.ctonlinereward.utils.SerializableUtil;
-import org.bukkit.Material;
+import com.cryptomorin.xseries.XEnchantment;
+import com.cryptomorin.xseries.XMaterial;
+import org.bukkit.ChatColor;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.enchantments.Enchantment;
+import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
-import java.io.*;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -19,89 +21,145 @@ public class RewardService {
 
     private RewardService() {
         ctOnlineReward = CtOnlineReward.getPlugin(CtOnlineReward.class);
-
     }
 
     public static RewardService getInstance() {
         return instance;
     }
 
+    /**
+     * 从奖励ID获取物品列表
+     */
     public List<ItemStack> getItemStackFromRewardId(String rewardId) {
         YamlConfiguration rewardYaml = YamlData.rewardYaml;
         if (!rewardYaml.contains(rewardId)) {
             return null;
         }
-        ConfigurationSection rewardIdYaml = rewardYaml.getConfigurationSection(rewardId);
-        if (!rewardIdYaml.contains("rewardData")) {
+        
+        ConfigurationSection rewardSection = rewardYaml.getConfigurationSection(rewardId);
+        if (rewardSection == null || !rewardSection.contains("items")) {
             return null;
         }
-        String rewardDataPath = rewardIdYaml.getString("rewardData");
-        File rewardDataFile = new File(ctOnlineReward.getDataFolder(), "rewardData/" + rewardDataPath);
-        return getItemStackFromFile(rewardDataFile);
-    }
 
-    public List<ItemStack> getItemStackFromFile(File file) {
-        Logger logger = ctOnlineReward.getLogger();
-        try {
-            FileInputStream fileInputStream = new FileInputStream(file);
-            byte[] bFile = new byte[(int) file.length()];
-            fileInputStream.read(bFile);
-            SerializableUtil serializableUtil = new SerializableUtil();
-            RewardData rewardData = serializableUtil.singleObjectFromByteArray(bFile, RewardData.class);
-            fileInputStream.close();
-            return rewardData.getRewardList();
-        } catch (FileNotFoundException e) {
-            String message = e.getMessage();
-            if (message.contains("系统找不到指定的文件")) {
-                int startIndex = 34;
-                int endIndex = message.indexOf("(系统找不到指定的文件。)");
-                String rewardDataName = message.substring(startIndex, endIndex);
-                logger.warning("§c§l■ 找不到奖励数据!");
-                logger.warning("§c§l■ 请使用/cor reward set " + rewardDataName + "设置奖励数据!");
+        List<ItemStack> items = new ArrayList<>();
+        List<Map<?, ?>> itemsList = rewardSection.getMapList("items");
+        
+        for (Map<?, ?> itemMap : itemsList) {
+            ItemStack item = createItemFromConfig(itemMap);
+            if (item != null) {
+                items.add(item);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-            logger.warning("§c§l■ 奖励数据读取失败!");
         }
-        return null;
+        
+        return items.isEmpty() ? null : items;
     }
 
-
-    public boolean saveRewardData(RewardData rewardData, String reward) {
-        Logger logger = ctOnlineReward.getLogger();
+    /**
+     * 从配置创建物品
+     */
+    private ItemStack createItemFromConfig(Map<?, ?> config) {
         try {
-            byte[] rewardDataBytes = getRewardDataBytes(rewardData);
-            File file = new File(ctOnlineReward.getDataFolder(), "rewardData/" + reward);
-            if (!file.exists()) {
-                boolean newFile = file.createNewFile();
-                if (newFile) {
-                    logger.info("§a§l● 奖励数据创建成功，奖励名为" + reward);
-                } else {
-                    logger.warning("§c§l■ 奖励数据创建失败，奖励名为" + reward);
+            // 获取材质类型
+            String typeStr = (String) config.get("type");
+            if (typeStr == null) {
+                ctOnlineReward.getLogger().warning("§c物品配置缺少 type 字段");
+                return null;
+            }
+
+            // 使用 XMaterial 解析材质（跨版本兼容）
+            Optional<XMaterial> xMaterial = XMaterial.matchXMaterial(typeStr);
+            if (!xMaterial.isPresent()) {
+                ctOnlineReward.getLogger().warning("§c未知的材质类型: " + typeStr);
+                return null;
+            }
+
+            ItemStack item = xMaterial.get().parseItem();
+            if (item == null) {
+                ctOnlineReward.getLogger().warning("§c无法创建物品: " + typeStr);
+                return null;
+            }
+
+            // 设置数量
+            int amount = config.containsKey("amount") ? ((Number) config.get("amount")).intValue() : 1;
+            item.setAmount(amount);
+
+            ItemMeta meta = item.getItemMeta();
+            if (meta != null) {
+                // 设置显示名称
+                if (config.containsKey("name")) {
+                    String name = (String) config.get("name");
+                    meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', name));
                 }
+
+                // 设置 Lore
+                if (config.containsKey("lore")) {
+                    List<?> loreList = (List<?>) config.get("lore");
+                    List<String> lore = new ArrayList<>();
+                    for (Object line : loreList) {
+                        lore.add(ChatColor.translateAlternateColorCodes('&', line.toString()));
+                    }
+                    meta.setLore(lore);
+                }
+
+                // 设置附魔
+                if (config.containsKey("enchantments")) {
+                    Map<?, ?> enchants = (Map<?, ?>) config.get("enchantments");
+                    for (Map.Entry<?, ?> entry : enchants.entrySet()) {
+                        String enchantName = entry.getKey().toString();
+                        int level = ((Number) entry.getValue()).intValue();
+                        
+                        Optional<XEnchantment> xEnchant = XEnchantment.matchXEnchantment(enchantName);
+                        if (xEnchant.isPresent()) {
+                            Enchantment enchant = xEnchant.get().getEnchant();
+                            if (enchant != null) {
+                                meta.addEnchant(enchant, level, true);
+                            }
+                        }
+                    }
+                }
+
+                // 设置物品标志
+                if (config.containsKey("flags")) {
+                    List<?> flags = (List<?>) config.get("flags");
+                    for (Object flag : flags) {
+                        try {
+                            ItemFlag itemFlag = ItemFlag.valueOf(flag.toString().toUpperCase());
+                            meta.addItemFlags(itemFlag);
+                        } catch (IllegalArgumentException e) {
+                            ctOnlineReward.getLogger().warning("§c未知的物品标志: " + flag);
+                        }
+                    }
+                }
+
+                // 设置自定义模型数据 (1.14+)
+                if (config.containsKey("customModelData")) {
+                    try {
+                        int customModelData = ((Number) config.get("customModelData")).intValue();
+                        meta.setCustomModelData(customModelData);
+                    } catch (Exception e) {
+                        // 旧版本不支持，忽略
+                    }
+                }
+
+                // 设置是否无法破坏
+                if (config.containsKey("unbreakable")) {
+                    boolean unbreakable = (Boolean) config.get("unbreakable");
+                    try {
+                        meta.setUnbreakable(unbreakable);
+                    } catch (Exception e) {
+                        // 旧版本不支持，忽略
+                    }
+                }
+
+                item.setItemMeta(meta);
             }
 
-            FileOutputStream fileOutputStream = new FileOutputStream(file);
-            fileOutputStream.write(rewardDataBytes);
-            fileOutputStream.close();
-            return true;
+            return item;
+            
         } catch (Exception e) {
+            ctOnlineReward.getLogger().warning("§c创建物品时出错: " + e.getMessage());
             e.printStackTrace();
-            logger.warning("§c§l■ 奖励数据保存失败!");
+            return null;
         }
-        return false;
     }
-
-    public byte[] getRewardDataBytes(RewardData rewardData) throws IOException {
-        SerializableUtil serializableUtil = new SerializableUtil();
-        return serializableUtil.singleObjectToByteArray(rewardData);
-    }
-
-    public boolean initRewardFile(){
-        ItemStack itemStack = new ItemStack(Material.APPLE);
-        RewardData rewardData = new RewardData(Collections.singletonList(itemStack));
-        return saveRewardData(rewardData,"10min");
-    }
-
-
 }
